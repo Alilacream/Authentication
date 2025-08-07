@@ -20,7 +20,7 @@ func Greetings(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).SendString("Welcome to my server")
 }
 
-var SecretKey= os.Getenv("SECRET_KEY")
+var SecretKey = os.Getenv("SECRET_KEY")
 
 // Register function that indecates the user, by using the data variable
 // we can Parse the values as a json form, then we input them into the Name email
@@ -75,8 +75,21 @@ func Login(c *fiber.Ctx) error {
 	token, err := clams.SignedString([]byte(SecretKey))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"Error": "Internal Server Error"
+			"Error": "Internal Server Error",
 		})
 	}
-	return c.Status(201).JSON(user)
+	// cookie created, the httponly mean that:
+	// the front-end knows when the cookie will end but
+	// in a form the user won't see it
+	cookie := fiber.Cookie{
+		Name:     "jwt",
+		Value:    token,
+		Expires:  time.Now().Add(time.Hour * 24),
+		HTTPOnly: true,
+	}
+
+	c.Cookie(&cookie)
+	return c.Status(201).JSON(fiber.Map{
+		"message": "success",
+	})
 }
