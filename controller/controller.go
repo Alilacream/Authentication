@@ -65,19 +65,23 @@ func Login(c *fiber.Ctx) error {
 	}
 	//Compares the actual userpassword, with the given password in the json format, if not the same, the err will be printed else the err == nil
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"]))
+
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).SendString("Unknown password")
 	}
-	clams := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
+
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email":   user.Email,
 		"Expires": time.Now().Add(time.Hour * 24).Unix(),
 	})
-	token, err := clams.SignedString([]byte(SecretKey))
+	token, err := claims.SignedString([]byte(SecretKey))
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"Error": "Internal Server Error",
 		})
 	}
+
 	// cookie created, the httponly mean that:
 	// the front-end knows when the cookie will end but
 	// in a form the user won't see it
