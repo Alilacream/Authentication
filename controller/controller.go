@@ -3,6 +3,7 @@ package controller
 import (
 	"Auth/database"
 	"Auth/models"
+	"fmt"
 	"os"
 	"time"
 
@@ -81,12 +82,13 @@ func Login(c *fiber.Ctx) error {
 			"Error": "Internal Server Error",
 		})
 	}
+	user_cookie := fmt.Sprintf("%s's_Cookie", user.Name)
 
 	// cookie created, the httponly mean that:
 	// the front-end knows when the cookie will end but
 	// in a form the user won't see it
 	cookie := fiber.Cookie{
-		Name:     "jwt",
+		Name:     user_cookie,
 		Value:    token,
 		Expires:  time.Now().Add(time.Hour * 24),
 		HTTPOnly: true,
@@ -96,4 +98,19 @@ func Login(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{
 		"message": "success",
 	})
+}
+func User(c *fiber.Ctx) error {
+	var user models.User
+	cookie := c.Cookies("jwt")
+	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(SecretKey), nil
+	})
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).SendString("Couldn't login")
+	}
+	claims := token.Claims.(*jwt.StandardClaims)
+	database.DB.Where("id = ?", claims.Issuer).First(&user)
+
+	return c.Status(201).JSON(user)
+
 }
